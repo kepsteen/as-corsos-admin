@@ -91,7 +91,7 @@ export async function uploadFile(formData: FormData) {
 
 	const {
 		data: { publicUrl },
-	} = supabase.storage.from("bucket_name").getPublicUrl(data.path);
+	} = supabase.storage.from("puppies").getPublicUrl(data.path);
 
 	return publicUrl;
 }

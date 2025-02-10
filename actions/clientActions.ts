@@ -12,7 +12,7 @@ export type PuppiesResponse = {
 };
 
 export async function createPuppy(formData: z.infer<typeof puppyFormSchema>) {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	const { data, error } = await supabase
 		.from("puppies")
@@ -34,7 +34,7 @@ export async function createPuppy(formData: z.infer<typeof puppyFormSchema>) {
 }
 
 export async function getPuppies() {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	const { data, error } = await supabase.from("puppies").select("*");
 

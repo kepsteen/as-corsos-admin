@@ -128,6 +128,7 @@ export default function PuppiesPage() {
 			const data = await response.json();
 			console.log("upload data", data);
 			const publicUrl = data.url;
+			console.log("publicUrl", publicUrl);
 			form.setValue("imageUrl", publicUrl);
 			// Create puppy with the uploaded image URL
 			await createPuppy(form.getValues());
@@ -164,7 +165,11 @@ export default function PuppiesPage() {
 					<CardDescription>View and manage existing puppies.</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<Accordion type="single" collapsible className="w-full">
+					<Accordion
+						type="single"
+						collapsible
+						className="w-full max-h-96 overflow-y-auto"
+					>
 						<AccordionItem value="puppies">
 							<AccordionTrigger>View All Puppies</AccordionTrigger>
 							<AccordionContent>
