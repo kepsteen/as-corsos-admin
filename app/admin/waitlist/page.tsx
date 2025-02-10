@@ -52,6 +52,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogDescription,
+	DialogFooter,
 } from "@/components/ui/dialog";
 import { Check, X } from "lucide-react";
 
@@ -237,58 +238,79 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 						</DropdownMenuContent>
 					</DropdownMenu>
 					<Dialog open={showDialog} onOpenChange={setShowDialog}>
-						<DialogContent>
+						<DialogContent className="max-w-2xl">
 							<DialogHeader>
-								<DialogTitle>Application Details</DialogTitle>
-								<DialogDescription>
-									Application information for {application.first_name}{" "}
-									{application.last_name}
+								<DialogTitle className="text-2xl font-semibold">
+									{application.first_name} {application.last_name}
+								</DialogTitle>
+								<DialogDescription className="text-muted-foreground">
+									Application submitted on {application.application_date}
 								</DialogDescription>
 							</DialogHeader>
-							<div className="grid gap-4 py-4">
-								<div className="grid grid-cols-4 items-center gap-4">
-									<label className="text-right font-medium">Email:</label>
-									<span className="col-span-3">{application.email}</span>
+							<div className="space-y-6 py-6">
+								<div className="space-y-4">
+									<h3 className="text-lg font-medium leading-6">
+										Contact Information
+									</h3>
+									<div className="grid grid-cols-4 items-center gap-4">
+										<label className="text-right text-sm font-medium text-muted-foreground">
+											Email:
+										</label>
+										<span className="col-span-3">{application.email}</span>
+									</div>
+									<div className="grid grid-cols-4 items-center gap-4">
+										<label className="text-right text-sm font-medium text-muted-foreground">
+											Phone:
+										</label>
+										<span className="col-span-3">
+											{application.phone_number}
+										</span>
+									</div>
 								</div>
-								<div className="grid grid-cols-4 items-center gap-4">
-									<label className="text-right font-medium">Phone:</label>
-									<span className="col-span-3">{application.phone_number}</span>
-								</div>
-								<div className="grid grid-cols-4 items-center gap-4">
-									<label className="text-right font-medium">
-										Gender Preference:
-									</label>
-									<span className="col-span-3">
-										{application.gender_preference || "No preference"}
-									</span>
-								</div>
-								<div className="grid grid-cols-4 items-center gap-4">
-									<label className="text-right font-medium">
-										Living Situation:
-									</label>
-									<span className="col-span-3">
-										{application.living_situation}
-									</span>
-								</div>
-								<div className="grid grid-cols-4 items-center gap-4">
-									<label className="text-right font-medium">Status:</label>
-									<span className="col-span-3">{application.status}</span>
+
+								<div className="space-y-4">
+									<h3 className="text-lg font-medium leading-6">
+										Preferences & Details
+									</h3>
+									<div className="grid grid-cols-4 items-center gap-4">
+										<label className="text-right text-sm font-medium text-muted-foreground">
+											Gender Preference:
+										</label>
+										<span className="col-span-3 capitalize">
+											{application.gender_preference || "No preference"}
+										</span>
+									</div>
+									<div className="grid grid-cols-4 items-center gap-4">
+										<label className="text-right text-sm font-medium text-muted-foreground">
+											Living Situation:
+										</label>
+										<span className="col-span-3 capitalize">
+											{application.living_situation}
+										</span>
+									</div>
+									<div className="grid grid-cols-4 items-center gap-4">
+										<label className="text-right text-sm font-medium text-muted-foreground">
+											Status:
+										</label>
+										<span className="col-span-3 capitalize">
+											{application.status}
+										</span>
+									</div>
 								</div>
 							</div>
-							<div className="flex justify-between space-x-4">
-								<Button
-									variant="outline"
-									className="bg-red-500 text-white hover:bg-red-600"
-								>
-									<X className="mr-2 h-4 w-4" /> Deny
-								</Button>
-								<Button
-									variant="outline"
-									className="bg-green-500 text-white hover:bg-green-600"
-								>
-									<Check className="mr-2 h-4 w-4" /> Accept
-								</Button>
-							</div>
+							<DialogFooter>
+								<div className="flex w-full justify-between space-x-4">
+									<Button variant="destructive" className="w-full">
+										<X className="mr-2 h-4 w-4" /> Deny Application
+									</Button>
+									<Button
+										variant="default"
+										className="w-full bg-green-600 hover:bg-green-700"
+									>
+										<Check className="mr-2 h-4 w-4" /> Approve Application
+									</Button>
+								</div>
+							</DialogFooter>
 						</DialogContent>
 					</Dialog>
 				</>
