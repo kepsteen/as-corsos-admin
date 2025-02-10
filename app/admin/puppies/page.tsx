@@ -65,39 +65,15 @@ export const puppyFormSchema = z.object({
 	imageUrl: z.string().optional(),
 });
 
-// Hardcoded puppy data
-const puppies = [
-	{
-		id: 1,
-		name: "Max",
-		gender: "male",
-		dateAvailable: "2023-07-15",
-		image: "/placeholder.svg?height=100&width=100",
-	},
-	{
-		id: 2,
-		name: "Luna",
-		gender: "female",
-		dateAvailable: "2023-07-20",
-		image: "/placeholder.svg?height=100&width=100",
-	},
-	{
-		id: 3,
-		name: "Charlie",
-		gender: "male",
-		dateAvailable: "2023-07-25",
-		image: "/placeholder.svg?height=100&width=100",
-	},
-];
-
 export default function PuppiesPage() {
 	const [puppies, setPuppies] = useState<PuppiesResponse[]>([]);
 
+	const fetchPuppies = async () => {
+		const data = await getPuppies();
+		setPuppies(data);
+	};
+
 	useEffect(() => {
-		async function fetchPuppies() {
-			const data = await getPuppies();
-			setPuppies(data);
-		}
 		fetchPuppies();
 	}, []);
 
@@ -128,9 +104,12 @@ export default function PuppiesPage() {
 			const data = await response.json();
 			console.log("upload data", data);
 			const publicUrl = data.url;
+			console.log("publicUrl", publicUrl);
 			form.setValue("imageUrl", publicUrl);
 			// Create puppy with the uploaded image URL
 			await createPuppy(form.getValues());
+
+			await fetchPuppies();
 
 			toast({
 				title: "Success",
@@ -164,7 +143,11 @@ export default function PuppiesPage() {
 					<CardDescription>View and manage existing puppies.</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<Accordion type="single" collapsible className="w-full">
+					<Accordion
+						type="single"
+						collapsible
+						className="w-full max-h-96 overflow-y-auto"
+					>
 						<AccordionItem value="puppies">
 							<AccordionTrigger>View All Puppies</AccordionTrigger>
 							<AccordionContent>
@@ -296,12 +279,12 @@ export default function PuppiesPage() {
 									</FormItem>
 								)}
 							/>
-							<button
+							<Button
 								type="submit"
 								onClick={() => console.log("values", form.getValues())}
 							>
 								Add Puppy
-							</button>
+							</Button>
 						</form>
 					</Form>
 				</CardContent>
