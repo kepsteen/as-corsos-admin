@@ -11,6 +11,7 @@ import {
 	type ColumnFiltersState,
 	type SortingState,
 	type VisibilityState,
+	type FilterFn,
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
@@ -203,10 +204,33 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 	},
 	{
 		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => (
-			<div className="capitalize">{row.getValue("status")}</div>
-		),
+		header: ({ column }) => {
+			return (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					Status
+					<CaretSortIcon className="ml-2 h-4 w-4" />
+				</Button>
+			);
+		},
+		cell: ({ row }) => {
+			const status = row.getValue("status") as string;
+			return (
+				<div
+					className={`capitalize ${
+						status === "Approved"
+							? "text-green-600"
+							: status === "Rejected"
+							? "text-red-600"
+							: ""
+					}`}
+				>
+					{status}
+				</div>
+			);
+		},
 	},
 	{
 		id: "actions",
@@ -226,12 +250,6 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							<DropdownMenuLabel>Actions</DropdownMenuLabel>
-							<DropdownMenuItem
-								onClick={() => navigator.clipboard.writeText(application.id)}
-							>
-								Copy application ID
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
 							<DropdownMenuItem onClick={() => setShowDialog(true)}>
 								View Application
 							</DropdownMenuItem>
@@ -327,6 +345,15 @@ export default function WaitlistPage() {
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [rowSelection, setRowSelection] = React.useState({});
+	const [globalFilter, setGlobalFilter] = React.useState("");
+
+	const fuzzyFilter: FilterFn<any> = (row, columnId, filterValue) => {
+		const searchValue = filterValue.toLowerCase();
+		const firstName = String(row.getValue("first_name")).toLowerCase();
+		const lastName = String(row.getValue("last_name")).toLowerCase();
+
+		return firstName.includes(searchValue) || lastName.includes(searchValue);
+	};
 
 	const table = useReactTable({
 		data,
@@ -339,12 +366,18 @@ export default function WaitlistPage() {
 		getFilteredRowModel: getFilteredRowModel(),
 		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
+		filterFns: {
+			fuzzy: fuzzyFilter,
+		},
+		globalFilterFn: fuzzyFilter,
 		state: {
 			sorting,
 			columnFilters,
 			columnVisibility,
 			rowSelection,
+			globalFilter,
 		},
+		onGlobalFilterChange: setGlobalFilter,
 	});
 
 	return (
@@ -358,13 +391,9 @@ export default function WaitlistPage() {
 			<CardContent>
 				<div className="mb-4 flex items-center gap-4">
 					<Input
-						placeholder="Filter names..."
-						value={
-							(table.getColumn("first_name")?.getFilterValue() as string) ?? ""
-						}
-						onChange={(event) =>
-							table.getColumn("first_name")?.setFilterValue(event.target.value)
-						}
+						placeholder="Filter first or last name..."
+						value={globalFilter}
+						onChange={(event) => setGlobalFilter(event.target.value)}
 						className="max-w-sm"
 					/>
 					<DropdownMenu>
