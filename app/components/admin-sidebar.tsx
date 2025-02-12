@@ -48,16 +48,14 @@ export function AdminSidebar() {
 	return (
 		<Sidebar
 			className={`h-screen flex flex-col fixed left-0 top-0 z-40 bg-white border-r transition-all duration-300 ${
-				isCollapsed ? "w-20" : "w-64"
+				isCollapsed ? "w-16" : "w-48"
 			}`}
 		>
 			<SidebarHeader className="flex items-center h-14 px-4 relative border-b">
 				{!isCollapsed && (
 					<h2 className="text-lg font-semibold truncate">Admin Panel</h2>
 				)}
-				<Button
-					variant="ghost"
-					size="icon"
+				<button
 					className="absolute right-2 z-50"
 					onClick={() => setIsCollapsed(!isCollapsed)}
 				>
@@ -66,7 +64,7 @@ export function AdminSidebar() {
 					) : (
 						<PanelLeftClose className="h-4 w-4" />
 					)}
-				</Button>
+				</button>
 			</SidebarHeader>
 			<SidebarContent className="flex-1">
 				<SidebarGroup>

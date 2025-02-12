@@ -189,6 +189,7 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 		cell: ({ row, table }) => {
 			const application = row.original;
 			const [showDialog, setShowDialog] = React.useState(false);
+			const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 			const [isUpdating, setIsUpdating] = React.useState(false);
 
 			const handleStatusUpdate = async (newStatus: "Approved" | "Rejected") => {
@@ -220,6 +221,32 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 				}
 			};
 
+			const handleDelete = async () => {
+				setIsUpdating(true);
+				try {
+					const supabase = createClient();
+					const { error } = await supabase
+						.from("puppy_adoption_waitlist")
+						.delete()
+						.eq("id", application.id);
+
+					if (error) throw error;
+
+					// Update the local state
+					const data = table.options.data as PuppyAdoptionWaitlist[];
+					const updatedData = data.filter((item) => item.id !== application.id);
+					table.options.meta?.updateData(updatedData);
+
+					toast.success("Application deleted successfully");
+					setShowDeleteDialog(false);
+				} catch (error) {
+					console.error("Error deleting application:", error);
+					toast.error("Failed to delete application");
+				} finally {
+					setIsUpdating(false);
+				}
+			};
+
 			return (
 				<>
 					<DropdownMenu>
@@ -232,7 +259,14 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 						<DropdownMenuContent align="end">
 							<DropdownMenuLabel>Actions</DropdownMenuLabel>
 							<DropdownMenuItem onClick={() => setShowDialog(true)}>
-								View Application
+								View Details
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => setShowDeleteDialog(true)}
+								className="text-red-600"
+							>
+								Delete Application
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -318,6 +352,34 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 										{isUpdating ? "Processing..." : "Approve Application"}
 									</Button>
 								</div>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+					<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Delete Application</DialogTitle>
+								<DialogDescription>
+									Are you sure you want to delete the application for{" "}
+									{application.first_name} {application.last_name}? This action
+									cannot be undone.
+								</DialogDescription>
+							</DialogHeader>
+							<DialogFooter>
+								<Button
+									variant="outline"
+									onClick={() => setShowDeleteDialog(false)}
+									disabled={isUpdating}
+								>
+									Cancel
+								</Button>
+								<Button
+									variant="destructive"
+									onClick={handleDelete}
+									disabled={isUpdating}
+								>
+									{isUpdating ? "Deleting..." : "Delete"}
+								</Button>
 							</DialogFooter>
 						</DialogContent>
 					</Dialog>

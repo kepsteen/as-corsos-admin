@@ -21,10 +21,10 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body className={inter.className}>
-				<SidebarProvider>
-					<div className="flex min-h-screen">
+				<SidebarProvider className="w-screen">
+					<div className="min-h-screen grid grid-cols-[11rem_1fr] w-full">
 						<AdminSidebar />
-						<main className="flex-1 p-8 transition-all duration-300">
+						<main className="flex-1 p-8 justify-center transition-all duration-300 w-full">
 							{children}
 						</main>
 					</div>
