@@ -42,6 +42,7 @@ import {
 	PuppiesResponse,
 } from "../../../actions/clientActions";
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/utils/client";
 
 export const puppyFormSchema = z.object({
 	name: z.string().min(2, {
@@ -126,9 +127,18 @@ export default function PuppiesPage() {
 		}
 	}
 
-	const handleDelete = (id: number) => {
+	const handleDelete = async (id: number) => {
 		// Implement delete functionality
-		console.log(`Deleting puppy with id: ${id}`);
+		const supabase = createClient();
+		const { error } = await supabase.from("puppies").delete().eq("id", id);
+
+		if (error) {
+			toast({
+				title: "Error",
+				description: "Failed to delete puppy",
+			});
+		}
+		setPuppies(puppies.filter((puppy) => puppy.id !== id));
 		toast({
 			title: "Delete Puppy",
 			description: `Deleting puppy with id: ${id}`,
