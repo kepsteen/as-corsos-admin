@@ -11,12 +11,14 @@ import {
 	type ColumnFiltersState,
 	type SortingState,
 	type VisibilityState,
+	type FilterFn,
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
 	useReactTable,
+	TableMeta,
 } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
@@ -55,64 +57,14 @@ import {
 	DialogFooter,
 } from "@/components/ui/dialog";
 import { Check, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/utils/client";
+import { toast } from "sonner";
 
-const data: PuppyAdoptionWaitlist[] = [
-	{
-		id: "1",
-		first_name: "John",
-		last_name: "Smith",
-		email: "john@example.com",
-		phone_number: "(123) 456-7890",
-		application_date: "2023-01-15",
-		status: "Pending",
-		gender_preference: "Male",
-		living_situation: "House with yard",
-	},
-	{
-		id: "2",
-		first_name: "Alice",
-		last_name: "Johnson",
-		email: "alice@example.com",
-		phone_number: "(234) 567-8901",
-		application_date: "2023-02-20",
-		status: "Approved",
-		gender_preference: "Female",
-		living_situation: "Apartment",
-	},
-	{
-		id: "3",
-		first_name: "Bob",
-		last_name: "Williams",
-		email: "bob@example.com",
-		phone_number: "(345) 678-9012",
-		application_date: "2023-03-25",
-		status: "Pending",
-		gender_preference: null,
-		living_situation: "House without yard",
-	},
-	{
-		id: "4",
-		first_name: "Emma",
-		last_name: "Davis",
-		email: "emma@example.com",
-		phone_number: "(456) 789-0123",
-		application_date: "2023-04-30",
-		status: "Approved",
-		gender_preference: "Male",
-		living_situation: "Farm",
-	},
-	{
-		id: "5",
-		first_name: "Michael",
-		last_name: "Brown",
-		email: "michael@example.com",
-		phone_number: "(567) 890-1234",
-		application_date: "2023-05-05",
-		status: "Rejected",
-		gender_preference: "Female",
-		living_situation: "Suburban house",
-	},
-];
+declare module "@tanstack/react-table" {
+	interface TableMeta<TData> {
+		updateData: (data: TData[]) => void;
+	}
+}
 
 export type PuppyAdoptionWaitlist = {
 	id: string;
@@ -203,17 +155,97 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 	},
 	{
 		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => (
-			<div className="capitalize">{row.getValue("status")}</div>
-		),
+		header: ({ column }) => {
+			return (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					Status
+					<CaretSortIcon className="ml-2 h-4 w-4" />
+				</Button>
+			);
+		},
+		cell: ({ row }) => {
+			const status = row.getValue("status") as string;
+			return (
+				<div
+					className={`capitalize ${
+						status === "Approved"
+							? "text-green-600"
+							: status === "Rejected"
+							? "text-red-600"
+							: ""
+					}`}
+				>
+					{status}
+				</div>
+			);
+		},
 	},
 	{
 		id: "actions",
 		enableHiding: false,
-		cell: ({ row }) => {
+		cell: ({ row, table }) => {
 			const application = row.original;
 			const [showDialog, setShowDialog] = React.useState(false);
+			const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+			const [isUpdating, setIsUpdating] = React.useState(false);
+
+			const handleStatusUpdate = async (newStatus: "Approved" | "Rejected") => {
+				setIsUpdating(true);
+				try {
+					const supabase = createClient();
+					const { data: updatedSupabaseData, error } = await supabase
+						.from("puppy_adoption_waitlist")
+						.update({ status: newStatus })
+						.eq("id", application.id);
+
+					if (error) console.error("Error updating status:", error);
+					console.log("updatedSupabaseData", updatedSupabaseData);
+
+					// Update the local state
+					const data = table.options.data as PuppyAdoptionWaitlist[];
+					const updatedData = data.map((item) =>
+						item.id === application.id ? { ...item, status: newStatus } : item
+					);
+					table.options.meta?.updateData(updatedData);
+
+					toast.success(`Application ${newStatus.toLowerCase()} successfully`);
+					setShowDialog(false);
+				} catch (error) {
+					console.error("Error updating status:", error);
+					toast.error("Failed to update application status");
+				} finally {
+					setIsUpdating(false);
+				}
+			};
+
+			const handleDelete = async () => {
+				setIsUpdating(true);
+				try {
+					const supabase = createClient();
+					const { error } = await supabase
+						.from("puppy_adoption_waitlist")
+						.delete()
+						.eq("id", application.id);
+
+					if (error) throw error;
+
+					// Update the local state
+					const data = table.options.data as PuppyAdoptionWaitlist[];
+					const updatedData = data.filter((item) => item.id !== application.id);
+					table.options.meta?.updateData(updatedData);
+
+					toast.success("Application deleted successfully");
+					setShowDeleteDialog(false);
+				} catch (error) {
+					console.error("Error deleting application:", error);
+					toast.error("Failed to delete application");
+				} finally {
+					setIsUpdating(false);
+				}
+			};
 
 			return (
 				<>
@@ -226,14 +258,15 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							<DropdownMenuLabel>Actions</DropdownMenuLabel>
-							<DropdownMenuItem
-								onClick={() => navigator.clipboard.writeText(application.id)}
-							>
-								Copy application ID
+							<DropdownMenuItem onClick={() => setShowDialog(true)}>
+								View Details
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
-							<DropdownMenuItem onClick={() => setShowDialog(true)}>
-								View Application
+							<DropdownMenuItem
+								onClick={() => setShowDeleteDialog(true)}
+								className="text-red-600"
+							>
+								Delete Application
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -300,16 +333,53 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 							</div>
 							<DialogFooter>
 								<div className="flex w-full justify-between space-x-4">
-									<Button variant="destructive" className="w-full">
-										<X className="mr-2 h-4 w-4" /> Deny Application
+									<Button
+										variant="destructive"
+										className="w-full"
+										onClick={() => handleStatusUpdate("Rejected")}
+										disabled={isUpdating}
+									>
+										<X className="mr-2 h-4 w-4" />
+										{isUpdating ? "Processing..." : "Deny Application"}
 									</Button>
 									<Button
 										variant="default"
 										className="w-full bg-green-600 hover:bg-green-700"
+										onClick={() => handleStatusUpdate("Approved")}
+										disabled={isUpdating}
 									>
-										<Check className="mr-2 h-4 w-4" /> Approve Application
+										<Check className="mr-2 h-4 w-4" />
+										{isUpdating ? "Processing..." : "Approve Application"}
 									</Button>
 								</div>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+					<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Delete Application</DialogTitle>
+								<DialogDescription>
+									Are you sure you want to delete the application for{" "}
+									{application.first_name} {application.last_name}? This action
+									cannot be undone.
+								</DialogDescription>
+							</DialogHeader>
+							<DialogFooter>
+								<Button
+									variant="outline"
+									onClick={() => setShowDeleteDialog(false)}
+									disabled={isUpdating}
+								>
+									Cancel
+								</Button>
+								<Button
+									variant="destructive"
+									onClick={handleDelete}
+									disabled={isUpdating}
+								>
+									{isUpdating ? "Deleting..." : "Delete"}
+								</Button>
 							</DialogFooter>
 						</DialogContent>
 					</Dialog>
@@ -320,6 +390,9 @@ export const columns: ColumnDef<PuppyAdoptionWaitlist>[] = [
 ];
 
 export default function WaitlistPage() {
+	const [waitlists, setWaitlists] = React.useState<PuppyAdoptionWaitlist[]>([]);
+	const [isLoading, setIsLoading] = React.useState(true);
+	const [error, setError] = React.useState<string | null>(null);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[]
@@ -327,9 +400,62 @@ export default function WaitlistPage() {
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [rowSelection, setRowSelection] = React.useState({});
+	const [globalFilter, setGlobalFilter] = React.useState("");
+
+	React.useEffect(() => {
+		let isSubscribed = true;
+
+		const fetchWaitlists = async () => {
+			try {
+				setIsLoading(true);
+				const supabase = createClient();
+				const {
+					data: { user },
+					error: userError,
+				} = await supabase.auth.getUser();
+
+				if (userError || !user) {
+					throw new Error("Not authenticated");
+				}
+
+				const { data, error } = await supabase
+					.from("puppy_adoption_waitlist")
+					.select("*");
+
+				if (error) throw error;
+
+				if (isSubscribed) {
+					setWaitlists(data as PuppyAdoptionWaitlist[]);
+				}
+			} catch (err) {
+				if (isSubscribed) {
+					console.error("Error fetching waitlists:", err);
+					setError("Failed to load waitlist data");
+				}
+			} finally {
+				if (isSubscribed) {
+					setIsLoading(false);
+				}
+			}
+		};
+
+		fetchWaitlists();
+
+		return () => {
+			isSubscribed = false;
+		};
+	}, []);
+
+	const fuzzyFilter: FilterFn<any> = (row, columnId, filterValue) => {
+		const searchValue = filterValue.toLowerCase();
+		const firstName = String(row.getValue("first_name")).toLowerCase();
+		const lastName = String(row.getValue("last_name")).toLowerCase();
+
+		return firstName.includes(searchValue) || lastName.includes(searchValue);
+	};
 
 	const table = useReactTable({
-		data,
+		data: waitlists,
 		columns,
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
@@ -339,13 +465,44 @@ export default function WaitlistPage() {
 		getFilteredRowModel: getFilteredRowModel(),
 		onColumnVisibilityChange: setColumnVisibility,
 		onRowSelectionChange: setRowSelection,
+		filterFns: {
+			fuzzy: fuzzyFilter,
+		},
+		globalFilterFn: fuzzyFilter,
 		state: {
 			sorting,
 			columnFilters,
 			columnVisibility,
 			rowSelection,
+			globalFilter,
+		},
+		onGlobalFilterChange: setGlobalFilter,
+		meta: {
+			updateData: (newData: PuppyAdoptionWaitlist[]) => {
+				setWaitlists(newData);
+			},
 		},
 	});
+
+	if (error) {
+		return (
+			<Card>
+				<CardContent className="pt-6">
+					<div className="text-center text-red-600">{error}</div>
+				</CardContent>
+			</Card>
+		);
+	}
+
+	if (isLoading) {
+		return (
+			<Card>
+				<CardContent className="pt-6">
+					<div className="text-center">Loading waitlist data...</div>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	return (
 		<Card>
@@ -358,13 +515,9 @@ export default function WaitlistPage() {
 			<CardContent>
 				<div className="mb-4 flex items-center gap-4">
 					<Input
-						placeholder="Filter names..."
-						value={
-							(table.getColumn("first_name")?.getFilterValue() as string) ?? ""
-						}
-						onChange={(event) =>
-							table.getColumn("first_name")?.setFilterValue(event.target.value)
-						}
+						placeholder="Filter first or last name..."
+						value={globalFilter}
+						onChange={(event) => setGlobalFilter(event.target.value)}
 						className="max-w-sm"
 					/>
 					<DropdownMenu>
